@@ -2,15 +2,15 @@ from selection_methods.SelectionMethod import SelectionMethod
 from CPrinter import CPLevel, CP
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class FSelector():
 
-    def __init__(self, d, alpha, lag, sel_method: SelectionMethod, verbosity: CPLevel):
+    def __init__(self, d, alpha, min_lag, max_lag, sel_method: SelectionMethod, verbosity: CPLevel):
         self.d = d
         self.alpha = alpha
-        self.lag = lag
+        self.min_lag = min_lag
+        self.max_lag = max_lag
         self.sel_method = sel_method
         self.dependencies = None
         self.result = None
@@ -51,58 +51,16 @@ class FSelector():
         return len(self.d.columns.values)
 
 
-    def get_dependencies_for_target(self, t):
-        """
-        Returns list of sources for a specified target
-
-        Args:
-            t (str): target variable name
-
-        Returns:
-            list(str): list of sources for target t
-        """
-        return [s[0] for s in self.dependencies[t]]
-
-
-    def get_dep_score_for_target(self, t):
-        """
-        Returns list of scores for a specified target
-
-        Args:
-            t (str): target variable name
-
-        Returns:
-            list(float): list of scores for target t
-        """
-        return [(s[0], s[1]) for s in self.dependencies[t]]
-
-
-    def __get_selected_features(self):
-        """
-        Returns the list of selected variables for d
-
-        Returns:
-            list(str): list of selected variable names
-        """
-        f_list = list()
-        for t in self.dependencies:
-            sources_t = self.get_dependencies_for_target(t)
-            if sources_t:
-                sources_t.append(t)
-            f_list = list(set(f_list + sources_t))
-        self.result = f_list
-
-    
     def run_selector(self):
         """
         Run selection method
         """
         CP.info("\n")
         CP.info("Selecting relevant features among: " + str(self.features))
-        CP.info("Selection method: " + self.sel_method.name.value)
+        CP.info("Selection method: " + self.sel_method.name)
         CP.info("Significance level: " + str(self.alpha))
 
-        self.sel_method.initialise(self.d, self.alpha, self.lag)
+        self.sel_method.initialise(self.d, self.alpha, self.min_lag, self.max_lag)
         self.dependencies = self.sel_method.compute_dependencies()
         self.__get_selected_features()
 
@@ -121,6 +79,35 @@ class FSelector():
         self.show_dependencies()
 
 
+    def __get_selected_features(self):
+        """
+        Returns the list of selected variables for d
+
+        Returns:
+            list(str): list of selected variable names
+        """
+        f_list = list()
+        for t in self.dependencies:
+            sources_t = self.__get_dependencies_for_target(t)
+            if sources_t:
+                sources_t.append(t)
+            f_list = list(set(f_list + sources_t))
+        self.result = f_list
+
+
+    def __get_dependencies_for_target(self, t):
+        """
+        Returns list of sources for a specified target
+
+        Args:
+            t (str): target variable name
+
+        Returns:
+            list(str): list of sources for target t
+        """
+        return [s[0] for s in self.dependencies[t]]
+
+
     def __get_dependencies_matrix(self):
         """
         Returns a matrix composed by scores for each target
@@ -136,17 +123,23 @@ class FSelector():
             dep_mat.append(dep_vet)
 
         dep_mat = np.array(dep_mat)
-        dep_mat = (dep_mat - np.min(dep_mat)) / (np.max(dep_mat) - np.min(dep_mat))
+        inf_mask = np.isinf(dep_mat)
+        neginf_mask = np.isneginf(dep_mat)
+        max_dep_mat = np.max(dep_mat[(dep_mat != -np.inf) & (dep_mat != np.inf)])
+        min_dep_mat = np.min(dep_mat[(dep_mat != -np.inf) & (dep_mat != np.inf)])
+
+        dep_mat[inf_mask] = max_dep_mat
+        dep_mat[neginf_mask] = min_dep_mat
+        dep_mat = (dep_mat - min_dep_mat) / (max_dep_mat - min_dep_mat)
         return dep_mat
 
 
     def show_dependencies(self):
         # FIXME: LAG not considered
-        # FIXME: add colormap on the right
         dependencies_matrix = self.__get_dependencies_matrix()
 
         fig, ax = plt.subplots()
-        im = ax.imshow(dependencies_matrix, cmap=plt.cm.Greens, interpolation='nearest', vmin=0, vmax=1, origin='lower')
+        im = ax.imshow(dependencies_matrix, cmap=plt.cm.Wistia, interpolation='nearest', vmin=0, vmax=1, origin='lower')
         fig.colorbar(im, orientation='vertical', label="score")
 
         plt.xlabel("Sources")
@@ -158,11 +151,15 @@ class FSelector():
 
 
     def print_dependencies(self):
-        print()
+        dash = '-' * 55
         for t in self.dependencies:
-            print(t, "dependencies:")
+            print()
+            print()
+            print(dash)
+            print("Target", t)
+            print(dash)
+            print('{:<10s}{:>15s}{:>15s}{:>15s}'.format('SOURCE', 'SCORE', 'PVAL', 'LAG'))
+            print(dash)
             for s in self.dependencies[t]:
-                print("\t - %s \t score: %.3f \t pval: %.3f \t lag: %2d" % (s[0], s[1], s[2], s[3]))
-            print("--------------------------------------------------")
-
+                print('{:<10s}{:>15.3f}{:>15.3f}{:>15d}'.format(s[0], s[1], s[2], s[3]))
         

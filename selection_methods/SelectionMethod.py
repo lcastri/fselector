@@ -1,24 +1,37 @@
 from abc import ABC, abstractmethod
+from enum import Enum
 from CPrinter import CP
+from CCorr import CCorr
+from MI import MI
+from TE import TE
+
+class CTest(Enum):
+    CCorr = "Cross-correlation"
+    MI = "Mutual Information"
+    HSICLasso = "HSICLasso"
+    TE = "Transfer Entropy"
+    MIT = "Momentary Information Transfer"
+
 
 class SelectionMethod(ABC):
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, ctest):
+        self.ctest = ctest
         self.d = None
         self.alpha = None
-        self.lag = None
+        self.min_lag = None
+        self.max_lag = None
         self.result = dict()
 
 
     @property
-    def sm_name(self):
+    def name(self):
         """
         Returns Selection Method name
 
         Returns:
             str: Selection Method name
         """
-        return self.name.value
+        return self.ctest.value
 
     
     @property
@@ -54,41 +67,50 @@ class SelectionMethod(ABC):
         return self.d.shape[1]
 
 
-    def initialise(self, d, alpha, lag):
+    def initialise(self, d, alpha, min_lag, max_lag):
         """
         Initialises the selection method
 
         Args:
             d (DataFrame): dataframe
             alpha (float): significance threshold
-            lag (int): lag time
+            min_lag (int): min lag time
+            max_lag (int): max lag time
         """
         self.d = d
         self.alpha = alpha
-        self.lag = lag
+        self.min_lag = min_lag
+        self.max_lag = max_lag
+        self.result = {f:list() for f in self.features}
 
 
-    def prepare_ts(self, target, apply_lag = True):
+    @abstractmethod
+    def compute_dependencies(self) -> dict:
+        pass
+
+
+    def _prepare_ts(self, target, lag, apply_lag = True):
         """
-        prepare the dataframe to analysis
+        prepare the dataframe to the analysis
 
         Args:
-            d (DataFrame): original dataframe
             target (str): name target var
+            lag (int): lag time to apply
+            apply_lag (bool, optional): True if you want to apply the lag, False otherwise. Defaults to True.
 
         Returns:
-            tuple(DataFrame): X and target DataFrames
+            tuple(DataFrame, DataFrame): source and target dataframe
         """
         if apply_lag:
-            Y = self.d[target][self.lag:]
-            X = self.d.loc[:, self.d.columns != target][:-self.lag]
+            Y = self.d[target][lag:]
+            X = self.d.loc[:, self.d.columns != target][:-lag]
         else:
             Y = self.d[target]
             X = self.d.loc[:, self.d.columns != target]
         return X, Y
 
 
-    def add_dependecies(self, t, s, score, pval, lag):
+    def _add_dependecies(self, t, s, score, pval, lag):
         """
         Adds found dependency from source (s) to target (t) specifying the 
         score, pval and the lag
@@ -100,10 +122,4 @@ class SelectionMethod(ABC):
             pval (float): pval associated to the dependency
             lag (int): lag time of the dependency
         """
-        if t not in self.result: self.result[t] = list()
         self.result[t].append((s, score, pval, lag))
-
-
-    @abstractmethod
-    def compute_dependencies(self) -> dict:
-        pass

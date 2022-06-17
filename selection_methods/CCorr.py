@@ -1,36 +1,28 @@
-from selection_methods.SelectionMethod import SelectionMethod
-import selection_methods.constants as const
-from sklearn.feature_selection import SelectKBest, f_regression
+from selection_methods.SelectionMethod import SelectionMethod, CTest
+from sklearn.feature_selection import f_regression
 
 
 class CCorr(SelectionMethod):
     def __init__(self):
-        super().__init__(const.score_fcn.CCorr)
+        super().__init__(CTest.CCorr)
 
 
     def compute_dependencies(self):
-        # TODO: add lag dependencies
-        for target in self.features:
-            X, Y = self.prepare_ts(target)
+        for lag in range(self.min_lag, self.max_lag + 1):
+            for target in self.features:
+                X, Y = self._prepare_ts(target, lag)
 
-            selector = SelectKBest(f_regression, k = const.K_BEST)
-            selector.fit_transform(X, Y)
+                scores, pval = f_regression(X, Y)
 
-            # TODO: decide if it is to remove
-            if const.K_BEST != 'all':
-                sel_sources = X.columns[selector.get_support(indices=True)].tolist()
-                sel_sources_score = selector.scores_.tolist()
-                sel_sources_pval = selector.pvalues_.tolist()
-            else:
                 # Filter on pvalue
-                f = selector.pvalues_ < self.alpha
+                f = pval < self.alpha
 
                 # Result of the selection
                 sel_sources = X.columns[f].tolist()
-                sel_sources_score = selector.scores_[f].tolist()
-                sel_sources_pval = selector.pvalues_[f].tolist()
+                sel_sources_score = scores[f].tolist()
+                sel_sources_pval = pval[f].tolist()
 
-            for s, score, pval in zip(sel_sources, sel_sources_score, sel_sources_pval):
-                self.add_dependecies(target, s, score, pval, self.lag)
+                for s, score, pval in zip(sel_sources, sel_sources_score, sel_sources_pval):
+                    self._add_dependecies(target, s, score, pval, lag)
 
         return self.result
