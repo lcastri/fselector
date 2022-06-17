@@ -51,7 +51,7 @@ class FSelector():
         return len(self.d.columns.values)
 
 
-    def run_selector(self):
+    def run(self):
         """
         Run selection method
         """
@@ -59,32 +59,18 @@ class FSelector():
         CP.info("Selecting relevant features among: " + str(self.features))
         CP.info("Selection method: " + self.sel_method.name)
         CP.info("Significance level: " + str(self.alpha))
+        CP.info("Max lag time: " + str(self.max_lag))
+        CP.info("Min lag time: " + str(self.min_lag))
 
         self.sel_method.initialise(self.d, self.alpha, self.min_lag, self.max_lag)
         self.dependencies = self.sel_method.compute_dependencies()
         self.__get_selected_features()
-
-
-    def run(self):
-        """
-        Run Feature Selector, print and show results
-
-        Wrapper for 3 methods:
-        - run_selector
-        - print_dependencies
-        - show_dependencies
-        """
-        self.run_selector()
-        self.print_dependencies()
-        self.show_dependencies()
+        CP.info("Feature selected: "+ str(self.result))
 
 
     def __get_selected_features(self):
         """
-        Returns the list of selected variables for d
-
-        Returns:
-            list(str): list of selected variable names
+        Defines the list of selected variables for d
         """
         f_list = list()
         for t in self.dependencies:
@@ -105,7 +91,7 @@ class FSelector():
         Returns:
             list(str): list of sources for target t
         """
-        return [s[0] for s in self.dependencies[t]]
+        return [s['source'] for s in self.dependencies[t]]
 
 
     def __get_dependencies_matrix(self):
@@ -119,7 +105,7 @@ class FSelector():
         for t in self.dependencies:
             dep_vet = [0] * self.nfeatures
             for s in self.dependencies[t]:
-                dep_vet[self.features.index(s[0])] = s[1]
+                dep_vet[self.features.index(s['source'])] = s['score']
             dep_mat.append(dep_vet)
 
         dep_mat = np.array(dep_mat)
@@ -132,6 +118,29 @@ class FSelector():
         dep_mat[neginf_mask] = min_dep_mat
         dep_mat = (dep_mat - min_dep_mat) / (max_dep_mat - min_dep_mat)
         return dep_mat
+
+
+    def get_selected_links(self):
+        """
+        Return selected links found by the selector
+        in this form: {0: [(0,-1), (2,-1)]}
+
+        Returns:
+            dict: selected links
+        """
+        # FIXME: find a way to compute autocorrelation instead of having it as default
+        sel_links = {self.features.index(f):list() for f in self.features}
+        for t in self.dependencies:
+
+            # add autocorrelation links
+            for lag in range(self.min_lag, self.max_lag + 1):
+                sel_links[self.features.index(t)].append((self.features.index(t), -lag))
+            
+            # add external links
+            for s in self.dependencies[t]:
+                sel_links[self.features.index(t)].append((self.features.index(s['source']), -s['lag']))
+
+        return sel_links
 
 
     def show_dependencies(self):
@@ -161,5 +170,5 @@ class FSelector():
             print('{:<10s}{:>15s}{:>15s}{:>15s}'.format('SOURCE', 'SCORE', 'PVAL', 'LAG'))
             print(dash)
             for s in self.dependencies[t]:
-                print('{:<10s}{:>15.3f}{:>15.3f}{:>15d}'.format(s[0], s[1], s[2], s[3]))
+                print('{:<10s}{:>15.3f}{:>15.3f}{:>15d}'.format(s['source'], s['score'], s['pval'], s['lag']))
         

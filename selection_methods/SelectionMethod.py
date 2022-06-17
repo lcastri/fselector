@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from CPrinter import CP
-from CCorr import CCorr
-from MI import MI
-from TE import TE
+from contextlib import contextmanager
+import sys, os
+
 
 class CTest(Enum):
     CCorr = "Cross-correlation"
@@ -11,6 +11,17 @@ class CTest(Enum):
     HSICLasso = "HSICLasso"
     TE = "Transfer Entropy"
     MIT = "Momentary Information Transfer"
+
+
+@contextmanager
+def _suppress_stdout():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:  
+            yield
+        finally:
+            sys.stdout = old_stdout
 
 
 class SelectionMethod(ABC):
@@ -122,4 +133,4 @@ class SelectionMethod(ABC):
             pval (float): pval associated to the dependency
             lag (int): lag time of the dependency
         """
-        self.result[t].append((s, score, pval, lag))
+        self.result[t].append({'source':s, 'score':score, 'pval':pval, 'lag':lag})

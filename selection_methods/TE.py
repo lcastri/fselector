@@ -1,28 +1,29 @@
-from selection_methods.SelectionMethod import SelectionMethod, CTest
+from selection_methods.SelectionMethod import SelectionMethod, CTest, _suppress_stdout
 from idtxl.multivariate_te import MultivariateTE
 from idtxl.data import Data
 
 
 class TE(SelectionMethod):
     def __init__(self):
-        super().__init__(CTest.MI)
+        super().__init__(CTest.TE)
 
 
     def compute_dependencies(self):
-        data = Data(self.d.values, dim_order='sp') # sp = samples(row) x processes(col)
+        with _suppress_stdout():
+            data = Data(self.d.values, dim_order='sp') # sp = samples(row) x processes(col)
 
-        network_analysis = MultivariateTE()
-        settings = {'cmi_estimator': 'JidtGaussianCMI',
-                    'max_lag_sources': self.max_lag,
-                    'min_lag_sources': self.min_lag,
-                    'history_target': 1,
-                    'alpha_max_stats': self.alpha,
-                    'alpha_min_stats': self.alpha,
-                    'alpha_omnibus': self.alpha,
-                    'alpha_max_seq': self.alpha,
-                    'verbose': False}
-
-        results = network_analysis.analyse_network(settings=settings, data=data)
+            network_analysis = MultivariateTE()
+            settings = {'cmi_estimator': 'JidtGaussianCMI',
+                        'max_lag_sources': self.max_lag,
+                        'min_lag_sources': self.min_lag,
+                        'history_target': 1,
+                        'alpha_max_stats': self.alpha,
+                        'alpha_min_stats': self.alpha,
+                        'alpha_omnibus': self.alpha,
+                        'alpha_max_seq': self.alpha,
+                        'verbose': False}
+            results = network_analysis.analyse_network(settings=settings, data=data)
+            
         for t in results._single_target.keys():
             sel_sources = [s[0] for s in results._single_target[t]['selected_vars_sources']]
             if sel_sources:
