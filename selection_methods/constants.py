@@ -1,5 +1,5 @@
-from enum import Enum
 
-
-
-K_BEST = 'all'
+SOURCE = 'source'
+SCORE = 'score'
+PVAL = 'pval'
+LAG = 'lag'

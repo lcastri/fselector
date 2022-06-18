@@ -1,7 +1,10 @@
+import copy
 from selection_methods.SelectionMethod import SelectionMethod
 from CPrinter import CPLevel, CP
 import matplotlib.pyplot as plt
 import numpy as np
+
+from selection_methods.constants import *
 
 
 class FSelector():
@@ -14,6 +17,7 @@ class FSelector():
         self.sel_method = sel_method
         self.dependencies = None
         self.result = None
+        self.score_threshold = -1
 
         CP.set_verbosity(verbosity)
 
@@ -64,11 +68,10 @@ class FSelector():
 
         self.sel_method.initialise(self.d, self.alpha, self.min_lag, self.max_lag)
         self.dependencies = self.sel_method.compute_dependencies()
-        self.__get_selected_features()
-        CP.info("Feature selected: "+ str(self.result))
+        return self.get_selected_features()
 
 
-    def __get_selected_features(self):
+    def get_selected_features(self):
         """
         Defines the list of selected variables for d
         """
@@ -79,6 +82,9 @@ class FSelector():
                 sources_t.append(t)
             f_list = list(set(f_list + sources_t))
         self.result = f_list
+        CP.info("Feature selected: "+ str(self.result))
+
+        return self.result
 
 
     def __get_dependencies_for_target(self, t):
@@ -91,7 +97,7 @@ class FSelector():
         Returns:
             list(str): list of sources for target t
         """
-        return [s['source'] for s in self.dependencies[t]]
+        return [s[SOURCE] for s in self.dependencies[t]]
 
 
     def __get_dependencies_matrix(self):
@@ -105,7 +111,7 @@ class FSelector():
         for t in self.dependencies:
             dep_vet = [0] * self.nfeatures
             for s in self.dependencies[t]:
-                dep_vet[self.features.index(s['source'])] = s['score']
+                dep_vet[self.features.index(s[SOURCE])] = s[SCORE]
             dep_mat.append(dep_vet)
 
         dep_mat = np.array(dep_mat)
@@ -138,12 +144,53 @@ class FSelector():
             
             # add external links
             for s in self.dependencies[t]:
-                sel_links[self.features.index(t)].append((self.features.index(s['source']), -s['lag']))
+                sel_links[self.features.index(t)].append((self.features.index(s[SOURCE]), -s[LAG]))
 
         return sel_links
+    
+    
+    def apply_score_threshold(self):
+        if (self.score_threshold is not None) and (self.score_threshold != -1):
+            CP.debug("Score threshold = " + str(self.score_threshold))
+            depend = copy.deepcopy(self.dependencies)
+            for t in depend:
+                sources = depend[t]
+                for s in sources:
+                    if s[SCORE] <= self.score_threshold:
+                        CP.debug("Removing source " + s[SOURCE] + " from target " + t + " : " + str(s[SCORE]))
+                        self.dependencies[t].remove(s)      
+        print()             
+        
+    
+    def get_score_threshold(self, causal_model):
+        """
+        Calculate score threshold based on the causal model 
+        obtained by the causal discovery analysis
+
+        Args:
+            causal_model (dict): causal model described as dictionary
+
+        Returns:
+            float: score threshold
+        """
+        score_removed = list()
+        for t in self.dependencies:
+            for s in self.dependencies[t]:
+                if (self.features.index(s[SOURCE]), -s[LAG]) not in causal_model[self.features.index(t)]:
+                    score_removed.append(s[SCORE])
+        if score_removed:
+            CP.debug("score removed \n" + '\n'.join([str(te) for te in score_removed]))
+            CP.debug("score threshold " + str(max(score_removed)))
+            self.score_threshold = max(score_removed)
+        else:
+            self.score_threshold = None
+        return self.score_threshold
 
 
     def show_dependencies(self):
+        """
+        Plot dependencies graph
+        """
         # FIXME: LAG not considered
         dependencies_matrix = self.__get_dependencies_matrix()
 
@@ -160,6 +207,9 @@ class FSelector():
 
 
     def print_dependencies(self):
+        """
+        Print dependencies found by the selector
+        """
         dash = '-' * 55
         for t in self.dependencies:
             print()
@@ -170,5 +220,5 @@ class FSelector():
             print('{:<10s}{:>15s}{:>15s}{:>15s}'.format('SOURCE', 'SCORE', 'PVAL', 'LAG'))
             print(dash)
             for s in self.dependencies[t]:
-                print('{:<10s}{:>15.3f}{:>15.3f}{:>15d}'.format(s['source'], s['score'], s['pval'], s['lag']))
+                print('{:<10s}{:>15.3f}{:>15.3f}{:>15d}'.format(s[SOURCE], s[SCORE], s[PVAL], s[LAG]))
         

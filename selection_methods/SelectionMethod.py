@@ -4,6 +4,8 @@ from CPrinter import CP
 from contextlib import contextmanager
 import sys, os
 
+from selection_methods.constants import *
+
 
 class CTest(Enum):
     CCorr = "Cross-correlation"
@@ -133,4 +135,7 @@ class SelectionMethod(ABC):
             pval (float): pval associated to the dependency
             lag (int): lag time of the dependency
         """
-        self.result[t].append({'source':s, 'score':score, 'pval':pval, 'lag':lag})
+        self.result[t].append({SOURCE:s, 
+                               SCORE:score,
+                               PVAL:pval, 
+                               LAG:lag})
