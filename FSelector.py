@@ -3,8 +3,13 @@ from selection_methods.SelectionMethod import SelectionMethod
 from CPrinter import CPLevel, CP
 import matplotlib.pyplot as plt
 import numpy as np
-
 from selection_methods.constants import *
+import numpy as np
+from utilities import utilities as utils
+from FValidator import FValidator
+
+import warnings
+warnings.filterwarnings('ignore')
 
 
 class FSelector():
@@ -17,10 +22,15 @@ class FSelector():
         self.sel_method = sel_method
         self.dependencies = None
         self.result = None
-        self.score_threshold = -1
-
+        self.score_threshold = utils.Thres.INIT
+        
+        self.validator = FValidator(d, alpha, min_lag, max_lag, verbosity)
+        self.validator.initilise()
+        
         CP.set_verbosity(verbosity)
 
+
+# region PROPERTIES
 
     @property
     def features(self):
@@ -53,27 +63,66 @@ class FSelector():
             int: number of features
         """
         return len(self.d.columns.values)
+    
+# endregion
 
+# region PUBLIC
 
-    def run(self):
+    def run_selector(self):
         """
         Run selection method
         """
         CP.info("\n")
-        CP.info("Selecting relevant features among: " + str(self.features))
-        CP.info("Selection method: " + self.sel_method.name)
-        CP.info("Significance level: " + str(self.alpha))
-        CP.info("Max lag time: " + str(self.max_lag))
-        CP.info("Min lag time: " + str(self.min_lag))
+        CP.info(utils.DASH)
+        CP.info(utils.bold("Selecting relevant features among: " + str(self.features)))
+        CP.info(utils.bold("Selection method: " + self.sel_method.name))
+        CP.info(utils.bold("Significance level: " + str(self.alpha)))
+        CP.info(utils.bold("Max lag time: " + str(self.max_lag)))
+        CP.info(utils.bold("Min lag time: " + str(self.min_lag)))
 
         self.sel_method.initialise(self.d, self.alpha, self.min_lag, self.max_lag)
         self.dependencies = self.sel_method.compute_dependencies()
+    
+    
+    def run(self):
+        """
+        Run Selector and Validator
+        
+        Returns:
+            list(str): list of selected variable names
+        """
+        
+        self.run_selector()
+        
+        while self.score_threshold is not utils.Thres.NOFOUND:
+            # exclude dependencies based on score threshold
+            self.__apply_score_threshold()
+            
+            # list of selected features based on dependencies
+            self.get_selected_features()
+            
+            # selected links to check by the validator
+            selected_links = self.__get_selected_links()
+            
+            # causal model on selected links
+            pcmci_result = self.validator.run(selected_links)
+            
+            if CP.verbosity.value >= CPLevel.DEBUG.value:
+                # comparison between obtained causal model and selected links 
+                self.__compare_selected_links(pcmci_result)
+                
+            # get score threshold based on causal model
+            self.__get_score_threshold(pcmci_result)
+            
         return self.get_selected_features()
 
 
     def get_selected_features(self):
         """
         Defines the list of selected variables for d
+
+        Returns:
+            list(str): list of selected variable names
         """
         f_list = list()
         for t in self.dependencies:
@@ -82,10 +131,48 @@ class FSelector():
                 sources_t.append(t)
             f_list = list(set(f_list + sources_t))
         self.result = f_list
-        CP.info("Feature selected: "+ str(self.result))
+        CP.info(utils.bold("\nFeature selected: "+ str(self.result)))
 
         return self.result
+    
+    
+    def show_dependencies(self):
+        """
+        Plot dependencies graph
+        """
+        # FIXME: LAG not considered
+        dependencies_matrix = self.__get_dependencies_matrix()
 
+        fig, ax = plt.subplots()
+        im = ax.imshow(dependencies_matrix, cmap=plt.cm.Wistia, interpolation='nearest', vmin=0, vmax=1, origin='lower')
+        fig.colorbar(im, orientation='vertical', label="score")
+
+        plt.xlabel("Sources")
+        plt.ylabel("Targets")
+        plt.xticks(ticks = range(0, self.nfeatures), labels = self.pretty_features, fontsize = 8)
+        plt.yticks(ticks = range(0, self.nfeatures), labels = self.pretty_features, fontsize = 8)
+        plt.title("Dependencies")
+        plt.show()
+
+
+    def print_dependencies(self):
+        """
+        Print dependencies found by the selector
+        """
+        for t in self.dependencies:
+            print()
+            print()
+            print(utils.DASH)
+            print("Target", t)
+            print(utils.DASH)
+            print('{:<10s}{:>15s}{:>15s}{:>15s}'.format('SOURCE', 'SCORE', 'PVAL', 'LAG'))
+            print(utils.DASH)
+            for s in self.dependencies[t]:
+                print('{:<10s}{:>15.3f}{:>15.3f}{:>15d}'.format(s[SOURCE], s[SCORE], s[PVAL], s[LAG]))       
+
+# endregion
+
+# region PRIVATE
 
     def __get_dependencies_for_target(self, t):
         """
@@ -126,7 +213,7 @@ class FSelector():
         return dep_mat
 
 
-    def get_selected_links(self):
+    def __get_selected_links(self):
         """
         Return selected links found by the selector
         in this form: {0: [(0,-1), (2,-1)]}
@@ -149,9 +236,11 @@ class FSelector():
         return sel_links
     
     
-    def apply_score_threshold(self):
-        if (self.score_threshold is not None) and (self.score_threshold != -1):
-            CP.debug("Score threshold = " + str(self.score_threshold))
+    def __apply_score_threshold(self):
+        """
+        Exclude dependencies based on score threshold found
+        """
+        if (self.score_threshold is not utils.Thres.NOFOUND) and (self.score_threshold != utils.Thres.INIT):
             depend = copy.deepcopy(self.dependencies)
             for t in depend:
                 sources = depend[t]
@@ -159,10 +248,10 @@ class FSelector():
                     if s[SCORE] <= self.score_threshold:
                         CP.debug("Removing source " + s[SOURCE] + " from target " + t + " : " + str(s[SCORE]))
                         self.dependencies[t].remove(s)      
-        print()             
+            CP.debug(utils.bold("Score threshold = " + str(self.score_threshold)))
         
     
-    def get_score_threshold(self, causal_model):
+    def __get_score_threshold(self, causal_model):
         """
         Calculate score threshold based on the causal model 
         obtained by the causal discovery analysis
@@ -173,52 +262,38 @@ class FSelector():
         Returns:
             float: score threshold
         """
+        CP.debug(utils.DASH)
+        CP.debug(utils.bold("Difference(s)"))
+        CP.debug(utils.DASH)
         score_removed = list()
         for t in self.dependencies:
             for s in self.dependencies[t]:
                 if (self.features.index(s[SOURCE]), -s[LAG]) not in causal_model[self.features.index(t)]:
+                    CP.debug("Target " + t + " source " + s[SOURCE])
                     score_removed.append(s[SCORE])
         if score_removed:
-            CP.debug("score removed \n" + '\n'.join([str(te) for te in score_removed]))
-            CP.debug("score threshold " + str(max(score_removed)))
+            CP.info("\n=> Difference(s) between dependencies and causal model")
             self.score_threshold = max(score_removed)
         else:
-            self.score_threshold = None
+            CP.debug("None")
+            CP.info("\n==> NO difference(s) between dependencies and causal model")
+            self.score_threshold = utils.Thres.NOFOUND
         return self.score_threshold
-
-
-    def show_dependencies(self):
-        """
-        Plot dependencies graph
-        """
-        # FIXME: LAG not considered
-        dependencies_matrix = self.__get_dependencies_matrix()
-
-        fig, ax = plt.subplots()
-        im = ax.imshow(dependencies_matrix, cmap=plt.cm.Wistia, interpolation='nearest', vmin=0, vmax=1, origin='lower')
-        fig.colorbar(im, orientation='vertical', label="score")
-
-        plt.xlabel("Sources")
-        plt.ylabel("Targets")
-        plt.xticks(ticks = range(0, self.nfeatures), labels = self.pretty_features, fontsize = 8)
-        plt.yticks(ticks = range(0, self.nfeatures), labels = self.pretty_features, fontsize = 8)
-        plt.title("Dependencies")
-        plt.show()
-
-
-    def print_dependencies(self):
-        """
-        Print dependencies found by the selector
-        """
-        dash = '-' * 55
-        for t in self.dependencies:
-            print()
-            print()
-            print(dash)
-            print("Target", t)
-            print(dash)
-            print('{:<10s}{:>15s}{:>15s}{:>15s}'.format('SOURCE', 'SCORE', 'PVAL', 'LAG'))
-            print(dash)
-            for s in self.dependencies[t]:
-                print('{:<10s}{:>15.3f}{:>15.3f}{:>15d}'.format(s[SOURCE], s[SCORE], s[PVAL], s[LAG]))
         
+        
+    def __compare_selected_links(self, validator_sel_links):
+        selector_sel_links = self.__get_selected_links()
+        print()
+        print(utils.DASH)
+        print(utils.bold("Selector selected links:"))
+        print(utils.DASH)
+        for t in selector_sel_links.keys():
+            print("Sources for target", self.features[t], ":", [self.features[s[0]] for s in selector_sel_links[t]])
+            
+        print(utils.DASH)
+        print(utils.bold("Validator selected links:"))
+        print(utils.DASH)
+        for t in validator_sel_links.keys():
+            print("Sources for target", self.features[t], ":", [self.features[s[0]] for s in validator_sel_links[t]])
+            
+# endregion
