@@ -355,6 +355,7 @@ MigrationBackup/
 *.png
 *.eps
 *.gif
+*.pkl
 
 # folder
 /.vscode

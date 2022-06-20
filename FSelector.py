@@ -1,4 +1,6 @@
 import copy
+
+from sympy import diff
 from selection_methods.SelectionMethod import SelectionMethod
 from CPrinter import CPLevel, CP
 import matplotlib.pyplot as plt
@@ -14,7 +16,10 @@ warnings.filterwarnings('ignore')
 
 class FSelector():
 
-    def __init__(self, d, alpha, min_lag, max_lag, sel_method: SelectionMethod, verbosity: CPLevel):
+    def __init__(self, d, alpha, min_lag, max_lag, sel_method: SelectionMethod, verbosity: CPLevel, resfolder: None):
+        self.o_d = d
+        self.o_dependencies = None
+        
         self.d = d
         self.alpha = alpha
         self.min_lag = min_lag
@@ -23,14 +28,43 @@ class FSelector():
         self.dependencies = None
         self.result = None
         self.score_threshold = utils.Thres.INIT
-        
-        self.validator = FValidator(d, alpha, min_lag, max_lag, verbosity)
-        self.validator.initilise()
-        
+        self.validator = FValidator(d, alpha, min_lag, max_lag, resfolder, verbosity)       
         CP.set_verbosity(verbosity)
 
 
 # region PROPERTIES
+    @property
+    def o_features(self):
+        """
+        Returns list of features
+
+        Returns:
+            list(str): list of feature names
+        """
+        return list(self.o_d.columns.values)
+
+
+    @property
+    def pretty_o_features(self):
+        """
+        Returns list of features with LATEX symbols
+
+        Returns:
+            list(str): list of feature names
+        """
+        return [r'$' + str(column) + '$' for column in self.o_d.columns.values]
+
+
+    @property
+    def n_o_features(self):
+        """
+        Number of features
+
+        Returns:
+            int: number of features
+        """
+        return len(self.o_d.columns.values)
+
 
     @property
     def features(self):
@@ -82,7 +116,8 @@ class FSelector():
 
         self.sel_method.initialise(self.d, self.alpha, self.min_lag, self.max_lag)
         self.dependencies = self.sel_method.compute_dependencies()
-    
+        self.o_dependecies = copy.deepcopy(self.dependencies)
+
     
     def run(self):
         """
@@ -99,12 +134,16 @@ class FSelector():
             self.__apply_score_threshold()
             
             # list of selected features based on dependencies
-            self.get_selected_features()
-            
+            sel_features = self.get_selected_features()
+
+            # shrink dataframe d and dependencies by sel_features
+            self.__shrink_d(sel_features)
+
             # selected links to check by the validator
             selected_links = self.__get_selected_links()
             
             # causal model on selected links
+            self.validator.d = self.d
             pcmci_result = self.validator.run(selected_links)
             
             if CP.verbosity.value >= CPLevel.DEBUG.value:
@@ -113,7 +152,10 @@ class FSelector():
                 
             # get score threshold based on causal model
             self.__get_score_threshold(pcmci_result)
-            
+        
+        self.validator.save_result()
+        self.validator.build_dag()
+        self.validator.build_ts_dag()
         return self.get_selected_features()
 
 
@@ -130,7 +172,7 @@ class FSelector():
             if sources_t:
                 sources_t.append(t)
             f_list = list(set(f_list + sources_t))
-        self.result = f_list
+        self.result = [f for f in self.features if f in f_list]
         CP.info(utils.bold("\nFeature selected: "+ str(self.result)))
 
         return self.result
@@ -149,8 +191,8 @@ class FSelector():
 
         plt.xlabel("Sources")
         plt.ylabel("Targets")
-        plt.xticks(ticks = range(0, self.nfeatures), labels = self.pretty_features, fontsize = 8)
-        plt.yticks(ticks = range(0, self.nfeatures), labels = self.pretty_features, fontsize = 8)
+        plt.xticks(ticks = range(0, self.n_o_features), labels = self.pretty_o_features, fontsize = 8)
+        plt.yticks(ticks = range(0, self.n_o_features), labels = self.pretty_o_features, fontsize = 8)
         plt.title("Dependencies")
         plt.show()
 
@@ -159,7 +201,7 @@ class FSelector():
         """
         Print dependencies found by the selector
         """
-        for t in self.dependencies:
+        for t in self.o_dependecies:
             print()
             print()
             print(utils.DASH)
@@ -167,12 +209,24 @@ class FSelector():
             print(utils.DASH)
             print('{:<10s}{:>15s}{:>15s}{:>15s}'.format('SOURCE', 'SCORE', 'PVAL', 'LAG'))
             print(utils.DASH)
-            for s in self.dependencies[t]:
+            for s in self.o_dependecies[t]:
                 print('{:<10s}{:>15.3f}{:>15.3f}{:>15d}'.format(s[SOURCE], s[SCORE], s[PVAL], s[LAG]))       
 
 # endregion
 
 # region PRIVATE
+
+    def __shrink_d(self, selected_features):
+        """
+        Shrinks dataframe d and dependencies based on the selected features
+
+        Args:
+            selected_features (list(str)): features selected by the selector
+        """
+        self.d = self.d[selected_features]
+        difference_set = self.dependencies.keys() - self.features
+        for d in difference_set: del self.dependencies[d]
+
 
     def __get_dependencies_for_target(self, t):
         """
@@ -195,10 +249,10 @@ class FSelector():
             np.array: score matrix
         """
         dep_mat = list()
-        for t in self.dependencies:
-            dep_vet = [0] * self.nfeatures
-            for s in self.dependencies[t]:
-                dep_vet[self.features.index(s[SOURCE])] = s[SCORE]
+        for t in self.o_dependecies:
+            dep_vet = [0] * self.n_o_features
+            for s in self.o_dependecies[t]:
+                dep_vet[self.o_features.index(s[SOURCE])] = s[SCORE]
             dep_mat.append(dep_vet)
 
         dep_mat = np.array(dep_mat)

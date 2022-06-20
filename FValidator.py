@@ -10,8 +10,7 @@ from utilities import utilities as utils, dag
 
 
 class FValidator():
-    def __init__(self, d, alpha, min_lag, max_lag, verbosity: CPLevel):
-        # FIXME: result and plot paths
+    def __init__(self, d, alpha, min_lag, max_lag, resfolder, verbosity: CPLevel):
         self.d = d
         self.alpha = alpha
         self.min_lag = min_lag
@@ -19,9 +18,8 @@ class FValidator():
         self.result = None
         self.val_method = None
         self.verbosity = verbosity.value
-        self.respath = None
-        self.dag_path = None
-        self.ts_dag_path = None
+
+        self.respath, self.dag_path, self.ts_dag_path = utils.create_resfolder(resfolder)
         
         
 # region PROPERTIES
@@ -58,24 +56,7 @@ class FValidator():
         """
         return len(self.d.columns.values)
     
-# endregion
-    
-    def initilise(self):
-        """
-        Initialise validator algorithm
-        """
-        # build tigramite dataset
-        vector = np.vectorize(float)
-        sub_data = vector(self.d)
-        dataframe = pp.DataFrame(data = sub_data,
-                                 var_names = self.pretty_features)
-        
-        
-        # init and run pcmci
-        self.val_method = PCMCI(dataframe = dataframe,
-                                cond_ind_test = GPDC(significance = 'analytic', gp_params = None),
-                                verbosity = self.verbosity)
-        
+# endregion    
         
         
     def run(self, selected_links):
@@ -88,6 +69,19 @@ class FValidator():
         CP.info('\n')
         CP.info(utils.DASH)
         CP.info(utils.bold("Running Causal Discovery Algorithm to find score threshold"))
+
+        # build tigramite dataset
+        vector = np.vectorize(float)
+        sub_data = vector(self.d)
+        dataframe = pp.DataFrame(data = sub_data,
+                                 var_names = self.pretty_features)
+        
+        
+        # init and run pcmci
+        self.val_method = PCMCI(dataframe = dataframe,
+                                cond_ind_test = GPDC(significance = 'analytic', gp_params = None),
+                                verbosity = self.verbosity)
+
         self.result = self.val_method.run_pcmci(selected_links = selected_links,
                                                 tau_max = self.max_lag,
                                                 tau_min = self.min_lag,
