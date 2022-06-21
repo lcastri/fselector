@@ -18,7 +18,7 @@ if __name__ == '__main__':
                    alpha = alpha, 
                    min_lag = min_lag, 
                    max_lag = max_lag, 
-                   sel_method = cTE(), 
+                   sel_method = TE(), 
                    verbosity = CPLevel.DEBUG,
                    resfolder = 'sim150')
     

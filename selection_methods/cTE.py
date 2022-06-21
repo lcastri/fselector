@@ -2,6 +2,10 @@ import numpy as np
 from selection_methods.SelectionMethod import SelectionMethod, CTest, _suppress_stdout
 from copent import copent
 from itertools import combinations
+from pyunicorn.timeseries import Surrogates
+from pyinform import transfer_entropy
+from PyIF.te_compute import te_compute
+
 
 ##### conditional independence test [3]
 ##### to test independence of (x,y) conditioned on z
@@ -12,19 +16,19 @@ def ci(x, y, z, k = 3, dtype = 2, mode = 1):
     return copent(xyz,k,dtype,mode) - copent(yz,k,dtype,mode) - copent(xz,k,dtype,mode)
 
 ##### estimating transfer entropy from y to x with lag [3]
-def transent(x, y, lag = 1, k = 3, dtype = 2, mode = 1):
-    xlen = len(x)
-    ylen = len(y)
+def transent(target, source, lag = 1, k = 3, dtype = 2, mode = 1):
+    xlen = len(target)
+    ylen = len(source)
     if (xlen > ylen):
         l = ylen
     else:
         l = xlen
     if (l < (lag + k + 1)):
         return 0
-    x1 = x[0:(l-lag)]
-    x2 = x[lag:l]
-    y = y[0:(l-lag)]
-    return -ci(x2,y,x1,k,dtype,mode)
+    x1 = target[0:(l-lag)]
+    x2 = target[lag:l]
+    source = source[0:(l-lag)]
+    return abs(ci(x2,source,x1,k,dtype,mode))
 
 
 class cTE(SelectionMethod):
@@ -41,25 +45,22 @@ class cTE(SelectionMethod):
         return p_comb
 
     def compute_dependencies(self):
-        combs = self.get_combinations()
-
         for target in self.features:
-            Y = self.d[target]
-            
-            te = dict()
-            for c in range(len(combs)):
-                print(c)
-                X = self.d[list(combs[c])]
-                te[c] = transent(Y.values, X.values, self.max_lag, k=self.n_features)
-            print()
+            print(target)
+            X, Y = self._prepare_ts(target, self.max_lag, apply_lag=False)
+            for source in X:
+                te = abs(te_compute(X[source].values, Y.values, k = 3, embedding=1, safetyCheck=False, GPU=False))
 
-        # for t in results._single_target.keys():
-        #     sel_sources = [s[0] for s in results._single_target[t]['selected_vars_sources']]
-        #     if sel_sources:
-        #         sel_sources_lag = [s[1] for s in results._single_target[t]['selected_vars_sources']]
-        #         sel_sources_score = results._single_target[t]['selected_sources_te']
-        #         sel_sources_pval = results._single_target[t]['selected_sources_pval']
-        #         for s, score, pval, lag in zip(sel_sources, sel_sources_score, sel_sources_pval, sel_sources_lag):
-        #             self._add_dependecies(self.features[t], self.features[s], score, pval, lag)
+                null_dist = np.zeros(100)
+                orig_data = np.c_[X[source].values, Y.values]
+                s = Surrogates(original_data=orig_data, silence_level=3)
+                for i in range(len(null_dist)):
+                    surrogates = s.AAFT_surrogates(original_data=orig_data)
+                    s.clear_cache()
+                    s._fft_cached=False
+                    null_dist[i] = abs(te_compute(surrogates[:,0], surrogates[:,1], k=1, embedding=1, safetyCheck=False, GPU=False))
+
+                pval = sum(null_dist > te)/len(null_dist)
+                self._add_dependecies(target, source, te, pval, self.max_lag)
 
         return self.result

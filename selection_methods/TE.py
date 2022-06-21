@@ -16,11 +16,11 @@ class TE(SelectionMethod):
             settings = {'cmi_estimator': 'JidtGaussianCMI',
                         'max_lag_sources': self.max_lag,
                         'min_lag_sources': self.min_lag,
-                        'history_target': 1,
                         'alpha_max_stats': self.alpha,
                         'alpha_min_stats': self.alpha,
                         'alpha_omnibus': self.alpha,
                         'alpha_max_seq': self.alpha,
+                        'permute_in_time': False,
                         'verbose': False}
             results = network_analysis.analyse_network(settings=settings, data=data)
             
