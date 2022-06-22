@@ -35,7 +35,7 @@ class FSelector():
     @property
     def o_features(self):
         """
-        Returns list of features
+        Returns list of original features (no filtered)
 
         Returns:
             list(str): list of feature names
@@ -44,9 +44,9 @@ class FSelector():
 
 
     @property
-    def pretty_o_features(self):
+    def o_pretty_features(self):
         """
-        Returns list of features with LATEX symbols
+        Returns list of original features (no filtered) with LATEX symbols
 
         Returns:
             list(str): list of feature names
@@ -55,9 +55,9 @@ class FSelector():
 
 
     @property
-    def n_o_features(self):
+    def o_nfeatures(self):
         """
-        Number of features
+        Number of original features (no filtered)
 
         Returns:
             int: number of features
@@ -190,8 +190,8 @@ class FSelector():
 
         plt.xlabel("Sources")
         plt.ylabel("Targets")
-        plt.xticks(ticks = range(0, self.n_o_features), labels = self.pretty_o_features, fontsize = 8)
-        plt.yticks(ticks = range(0, self.n_o_features), labels = self.pretty_o_features, fontsize = 8)
+        plt.xticks(ticks = range(0, self.o_nfeatures), labels = self.o_pretty_features, fontsize = 8)
+        plt.yticks(ticks = range(0, self.o_nfeatures), labels = self.o_pretty_features, fontsize = 8)
         plt.title("Dependencies")
         plt.show()
 
@@ -249,7 +249,7 @@ class FSelector():
         """
         dep_mat = list()
         for t in self.o_dependecies:
-            dep_vet = [0] * self.n_o_features
+            dep_vet = [0] * self.o_nfeatures
             for s in self.o_dependecies[t]:
                 dep_vet[self.o_features.index(s[SOURCE])] = s[SCORE]
             dep_mat.append(dep_vet)

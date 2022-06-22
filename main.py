@@ -4,7 +4,7 @@ from FSelector import FSelector
 from selection_methods.CCorr import CCorr
 from selection_methods.MI import MI 
 from selection_methods.TE import TE
-from selection_methods.cTE import cTE
+from selection_methods.myTE import myTE
 
 
 if __name__ == '__main__':
@@ -12,15 +12,15 @@ if __name__ == '__main__':
     min_lag = 1
     max_lag = 1
     
-    # df = pd.read_csv('sim/interactions/interaction_1.csv')
-    df = pd.read_csv('thor/interactions/interaction_10.csv')
+    df = pd.read_csv('sim150/interactions/interaction_1_cut.csv')
+    # df = pd.read_csv('thor/interactions/interaction_10.csv')
     df.fillna(inplace=True, method="ffill")
     df.fillna(inplace=True, method="bfill")
     FS = FSelector(df, 
                    alpha = alpha, 
                    min_lag = min_lag, 
                    max_lag = max_lag, 
-                   sel_method = TE(), 
+                   sel_method = myTE(), 
                    verbosity = CPLevel.DEBUG,
                    resfolder = 'thor_10')
     
