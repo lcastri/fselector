@@ -3,7 +3,6 @@ from selection_methods.SelectionMethod import SelectionMethod, CTest, _suppress_
 from copent import copent
 from itertools import combinations
 from pyunicorn.timeseries import Surrogates
-from pyinform import transfer_entropy
 from PyIF.te_compute import te_compute
 
 

@@ -13,14 +13,16 @@ if __name__ == '__main__':
     max_lag = 1
     
     # df = pd.read_csv('sim/interactions/interaction_1.csv')
-    df = pd.read_csv('sim150/interactions/interaction_1_cut.csv')
+    df = pd.read_csv('thor/interactions/interaction_10.csv')
+    df.fillna(inplace=True, method="ffill")
+    df.fillna(inplace=True, method="bfill")
     FS = FSelector(df, 
                    alpha = alpha, 
                    min_lag = min_lag, 
                    max_lag = max_lag, 
                    sel_method = TE(), 
                    verbosity = CPLevel.DEBUG,
-                   resfolder = 'sim150')
+                   resfolder = 'thor_10')
     
     selector_res = FS.run()
     FS.print_dependencies()

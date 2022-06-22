@@ -1,6 +1,5 @@
 import copy
 
-from sympy import diff
 from selection_methods.SelectionMethod import SelectionMethod
 from CPrinter import CPLevel, CP
 import matplotlib.pyplot as plt
