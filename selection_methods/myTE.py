@@ -6,10 +6,10 @@ from selection_methods.constants import *
 import copy
 
 
-# Change location of jar to match yours:
-jarLocation = "jidt/infodynamics.jar"
-# Start the JVM (add the "-Xmx" option with say 1024M if you get crashes due to not enough memory space)
-jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
+# # Change location of jar to match yours:
+# jarLocation = "jidt/infodynamics.jar"
+# # Start the JVM (add the "-Xmx" option with say 1024M if you get crashes due to not enough memory space)
+# jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
 
 
 
@@ -118,9 +118,6 @@ class myTE(SelectionMethod):
                 conditions_vars = [s[SOURCE] for s in sources[t]]
                 if len(conditions_vars) != 0:
                     source = np.c_[self.d[conditions_vars], self.d[c].values]
-                    self.EstimTE.initialise(source.shape[1], source.shape[1])
-                    self.EstimTE.addObservations(source, self.d[t].values)
-                    result = self.EstimTE.computeAverageLocalOfObservations()
                 else:
                     source = self.d[c].values
                 te = self.measure_dependecy(source, self.d[t].values)

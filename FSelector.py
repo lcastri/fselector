@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 
 class FSelector():
 
-    def __init__(self, d, alpha, min_lag, max_lag, resfolder, sel_method: SelectionMethod, verbosity: CPLevel):
+    def __init__(self, d, alpha, min_lag, max_lag, sel_method: SelectionMethod, verbosity: CPLevel, resfolder = None):
         self.o_d = d
         self.o_dependencies = None
         
@@ -28,9 +28,12 @@ class FSelector():
         self.dependencies = None
         self.result = None
         self.score_threshold = utils.Thres.INIT
-        
-        logpath, self.dependency_path = utils.get_selectorpath(resfolder)
-        sys.stdout = log.Logger(logpath)
+
+        self.dependency_path = None
+        if resfolder is not None:
+            utils.create_results_folder()
+            logpath, self.dependency_path = utils.get_selectorpath(resfolder)
+            sys.stdout = log.Logger(logpath)
         
         self.validator = FValidator(d, alpha, min_lag, max_lag, resfolder, verbosity)       
         CP.set_verbosity(verbosity)
@@ -185,7 +188,7 @@ class FSelector():
     
     def show_dependencies(self):
         """
-        Plot dependencies graph
+        Saves dependencies graph if resfolder is set otherwise it shows the figure
         """
         # FIXME: LAG not considered
         dependencies_matrix = self.__get_dependencies_matrix()
@@ -199,8 +202,11 @@ class FSelector():
         plt.xticks(ticks = range(0, self.o_nfeatures), labels = self.o_pretty_features, fontsize = 8)
         plt.yticks(ticks = range(0, self.o_nfeatures), labels = self.o_pretty_features, fontsize = 8)
         plt.title("Dependencies")
-        plt.savefig(self.dependency_path, dpi=300)
-        plt.show()
+
+        if self.dependency_path is not None:
+            plt.savefig(self.dependency_path, dpi=300)
+        else:
+            plt.show()
 
 
     def print_dependencies(self):
@@ -300,6 +306,8 @@ class FSelector():
         """
         Exclude dependencies based on score threshold found
         """
+        CP.debug(utils.DASH)
+        CP.debug(utils.bold("Applying score threshold"))
         if (self.score_threshold is not utils.Thres.NOFOUND) and (self.score_threshold != utils.Thres.INIT):
             depend = copy.deepcopy(self.dependencies)
             for t in depend:
@@ -308,7 +316,7 @@ class FSelector():
                     if s[SCORE] <= self.score_threshold:
                         CP.debug("Removing source " + s[SOURCE] + " from target " + t + " : " + str(s[SCORE]))
                         self.dependencies[t].remove(s)      
-            CP.debug(utils.bold("Score threshold = " + str(self.score_threshold)))
+            
         
     
     def __get_score_threshold(self, causal_model):
@@ -329,14 +337,17 @@ class FSelector():
         for t in self.dependencies:
             for s in self.dependencies[t]:
                 if (self.features.index(s[SOURCE]), -s[LAG]) not in causal_model[self.features.index(t)]:
-                    CP.debug("Target " + t + " source " + s[SOURCE])
+                    CP.debug("Source " + s[SOURCE] + " for target " + t)
                     score_removed.append(s[SCORE])
         if score_removed:
-            CP.info("\n=> Difference(s) between dependencies and causal model")
+            CP.info("\n==> Difference(s) between dependencies and causal model")
+            CP.info("==> Stopping criteria NOT REACHED")
             self.score_threshold = max(score_removed)
+            CP.debug(utils.bold("Score threshold = " + str(self.score_threshold)))
         else:
             CP.debug("None")
             CP.info("\n==> NO difference(s) between dependencies and causal model")
+            CP.info("==> Stopping criteria REACHED")
             self.score_threshold = utils.Thres.NOFOUND
         return self.score_threshold
         

@@ -19,7 +19,11 @@ class FValidator():
         self.val_method = None
         self.verbosity = verbosity.value
 
-        self.respath, self.dag_path, self.ts_dag_path = utils.get_validatorpaths(resfolder)
+        self.respath = None
+        self.dag_path = None
+        self.ts_dag_path = None
+        if resfolder is not None:
+            self.respath, self.dag_path, self.ts_dag_path = utils.get_validatorpaths(resfolder)
         
         
 # region PROPERTIES
@@ -93,7 +97,7 @@ class FValidator():
     
     def build_ts_dag(self):
         """
-        Save timeseries dag plot
+        Saves timeseries dag plot if resfolder is set otherwise it shows the figure
         """
         tigraplot.plot_time_series_graph(figsize = (6, 4),
                                          graph = self.result['graph'],
@@ -110,7 +114,7 @@ class FValidator():
 
     def build_dag(self):
         """
-        Save dag plot
+        Saves dag plot if resfolder is set otherwise it shows the figure
         """
         dag.plot_graph(figsize = (6, 4), 
                        graph = self.result['graph'],
@@ -129,15 +133,16 @@ class FValidator():
         
     def save_result(self):
         """
-        Save causal discovery results as pickle file
+        Save causal discovery results as pickle file if resfolder is set
         """
-        res = copy.deepcopy(self.result)
-        res['alpha'] = self.alpha
-        res['var_names'] = self.pretty_features
-        res['dag_path'] = self.dag_path
-        res['ts_dag_path'] = self.ts_dag_path
-        with open(self.respath, 'wb') as resfile:
-            pickle.dump(res, resfile)
+        if self.respath is not None:
+            res = copy.deepcopy(self.result)
+            res['alpha'] = self.alpha
+            res['var_names'] = self.pretty_features
+            res['dag_path'] = self.dag_path
+            res['ts_dag_path'] = self.ts_dag_path
+            with open(self.respath, 'wb') as resfile:
+                pickle.dump(res, resfile)
         
         
     def __return_parents_dict(self):

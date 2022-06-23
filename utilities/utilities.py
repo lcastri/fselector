@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+import os
 from pathlib import Path
 
 
@@ -12,6 +13,14 @@ TSDAG_FILENAME = "ts_dag.png"
 DEP_FILENAME = "dependency.png"
 LOG_FILENAME = "log.txt"
 RESULTS_FILENAME = "results"
+
+
+def cls():
+    """
+    Clear terminal
+    """
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 
 def bold(msg):
     """
