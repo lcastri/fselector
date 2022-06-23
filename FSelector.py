@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from selection_methods.constants import *
 import numpy as np
-from utilities import utilities as utils
+from utilities import utilities as utils, logger as log
 from FValidator import FValidator
+import sys
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -15,7 +16,7 @@ warnings.filterwarnings('ignore')
 
 class FSelector():
 
-    def __init__(self, d, alpha, min_lag, max_lag, sel_method: SelectionMethod, verbosity: CPLevel, resfolder: None):
+    def __init__(self, d, alpha, min_lag, max_lag, resfolder, sel_method: SelectionMethod, verbosity: CPLevel):
         self.o_d = d
         self.o_dependencies = None
         
@@ -27,11 +28,16 @@ class FSelector():
         self.dependencies = None
         self.result = None
         self.score_threshold = utils.Thres.INIT
+        
+        logpath, self.dependency_path = utils.get_selectorpath(resfolder)
+        sys.stdout = log.Logger(logpath)
+        
         self.validator = FValidator(d, alpha, min_lag, max_lag, resfolder, verbosity)       
         CP.set_verbosity(verbosity)
 
 
 # region PROPERTIES
+
     @property
     def o_features(self):
         """
@@ -193,6 +199,7 @@ class FSelector():
         plt.xticks(ticks = range(0, self.o_nfeatures), labels = self.o_pretty_features, fontsize = 8)
         plt.yticks(ticks = range(0, self.o_nfeatures), labels = self.o_pretty_features, fontsize = 8)
         plt.title("Dependencies")
+        plt.savefig(self.dependency_path, dpi=300)
         plt.show()
 
 

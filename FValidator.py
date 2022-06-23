@@ -19,7 +19,7 @@ class FValidator():
         self.val_method = None
         self.verbosity = verbosity.value
 
-        self.respath, self.dag_path, self.ts_dag_path = utils.create_resfolder(resfolder)
+        self.respath, self.dag_path, self.ts_dag_path = utils.get_validatorpaths(resfolder)
         
         
 # region PROPERTIES
