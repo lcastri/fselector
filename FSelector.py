@@ -1,9 +1,7 @@
 import copy
-
 from selection_methods.SelectionMethod import SelectionMethod
 from CPrinter import CPLevel, CP
 import matplotlib.pyplot as plt
-import numpy as np
 from selection_methods.constants import *
 import numpy as np
 from utilities import utilities as utils, logger as log
