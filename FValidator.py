@@ -76,8 +76,8 @@ class FValidator():
 
         # build tigramite dataset
         vector = np.vectorize(float)
-        sub_data = vector(self.d)
-        dataframe = pp.DataFrame(data = sub_data,
+        data = vector(self.d)
+        dataframe = pp.DataFrame(data = data,
                                  var_names = self.pretty_features)
         
         
