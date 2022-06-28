@@ -8,6 +8,7 @@ from tigramite.independence_tests import ParCorr, CMIknn, GPDC, GPDCtorch
 from CPrinter import CPLevel
 from FSelector import FSelector
 from selection_methods.TE import TE
+from datetime import datetime
 
 
 alpha = 0.05
@@ -35,7 +36,8 @@ data[:, -1] = const
 for t in range(1, nsample):
     data[t, 0] += data[t-1, 1] * (4 * data[t-1, 4])
     data[t, 2] += 0.3 * data[t-1, 1]**2
-    data[t, 4] += 0.2 * (data[t-1, 4] + data[t-1, 5])
+    data[t, 3] += data[t-1, 3] + 0.01
+    data[t, 4] += 0.2 * (data[t-1, 4] + 2 * data[t-1, 5])
 
 
 var_names = ['X_' + str(f) for f in range(nfeature)]
@@ -49,9 +51,14 @@ FS = FSelector(df,
                max_lag = max_lag, 
                sel_method = TE(), 
                verbosity = CPLevel.DEBUG,
-               resfolder = 'w_selector')
+               resfolder = 'simpleCMI')
 
+startTE = datetime.now()
 selector_res = FS.run()
+stopTE = datetime.now()
+
+print("\nTOTAL TIME WITH TE: (hh:mm:ss.ms) {}".format(str(stopTE - startTE)))
+
 FS.print_dependencies()
 FS.show_dependencies()
 
@@ -64,19 +71,22 @@ dataframe = pp.DataFrame(data, var_names = var_names_pretty)
 
 # init and run pcmci
 pcmci = PCMCI(dataframe = dataframe,
-              cond_ind_test = GPDC(significance = 'analytic', gp_params = None),
+            #   cond_ind_test = GPDC(significance = 'analytic', gp_params = None),
+              cond_ind_test = CMIknn(),
               verbosity = 2)
               
-              
+startPCMCI = datetime.now()              
 results = pcmci.run_pcmci(tau_max = 1,
                           tau_min = 1,
                           pc_alpha = 0.05)
+stopPCMCI = datetime.now()              
+print("\nTOTAL TIME WITHOUT TE: (hh:mm:ss.ms) {}".format(str(stopPCMCI - startPCMCI)))
 
 
 tigraplot.plot_graph(
     val_matrix=results['val_matrix'],
     graph=results['graph'],
-    save_name='wo_selector',
+    save_name='results/simpleCMI/wo_selector',
     var_names=var_names_pretty,
     link_colorbar_label='cross-MCI',
     node_colorbar_label='auto-MCI',

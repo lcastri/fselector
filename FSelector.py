@@ -1,4 +1,5 @@
 import copy
+from datetime import datetime
 from selection_methods.SelectionMethod import SelectionMethod
 from CPrinter import CPLevel, CP
 import matplotlib.pyplot as plt
@@ -133,7 +134,10 @@ class FSelector():
             list(str): list of selected variable names
         """
         
+        startSel = datetime.now()
         self.run_selector()
+        stopSel = datetime.now()
+        print("\nTOTAL TIME Selector: (hh:mm:ss.ms) {}".format(str(stopSel - startSel)))
         
         while self.score_threshold is not utils.Thres.NOFOUND:
             # exclude dependencies based on score threshold
@@ -150,7 +154,10 @@ class FSelector():
             
             # causal model on selected links
             self.validator.d = self.d
+            startVal = datetime.now()
             pcmci_result = self.validator.run(selected_links)
+            stopVal = datetime.now()
+            print("\nTOTAL TIME Validator: (hh:mm:ss.ms) {}".format(str(stopVal - startVal)))
             
             if CP.verbosity.value >= CPLevel.DEBUG.value:
                 # comparison between obtained causal model and selected links 
