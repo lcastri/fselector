@@ -304,9 +304,9 @@ class FSelector():
         """
         Exclude dependencies based on score threshold found
         """
-        CP.debug(utils.DASH)
-        CP.debug(utils.bold("Applying score threshold"))
         if (self.score_threshold is not utils.Thres.NOFOUND) and (self.score_threshold != utils.Thres.INIT):
+            CP.debug(utils.DASH)
+            CP.debug(utils.bold("Applying score threshold"))
             depend = copy.deepcopy(self.dependencies)
             for t in depend:
                 sources = depend[t]

@@ -15,11 +15,11 @@ min_lag = 1
 max_lag = 1
 
 
-
 np.random.seed(1)
 nsample = 1500
 nfeature = 7
 data = np.random.randn(nsample, nfeature)
+
 
 const = list()
 for t in range(int(nsample/3)):
@@ -31,20 +31,42 @@ for t in range(int(nsample/3)):
 const = np.array(const)
 data[:, -1] = const
 
+
 for t in range(1, nsample):
-    data[t, 0] += 0.4 * data[t-1, 1]**2
-    data[t, 2] += 0.3 * data[t-1, 1]**2
+    data[t, 0] += 4 * data[t-1, 1]
+    data[t, 2] += 0.3 * data[t-1, 1]
     data[t, 4] += 0.2 * (data[t-1, 4] + data[t-1, 5])
 
-var_names = [r'$X_' + str(f) + '$' for f in range(nfeature)]
 
-dataframe = pp.DataFrame(data, var_names = var_names)
-tigraplot.plot_timeseries(dataframe); plt.show()
+var_names = ['X_' + str(f) for f in range(nfeature)]
+var_names_pretty = [r'$X_' + str(f) + '$' for f in range(nfeature)]
 
- # init and run pcmci
+
+df = pd.DataFrame(data, columns=var_names)
+FS = FSelector(df, 
+               alpha = alpha, 
+               min_lag = min_lag, 
+               max_lag = max_lag, 
+               sel_method = TE(), 
+               verbosity = CPLevel.DEBUG,
+               resfolder = 'w_selector')
+
+selector_res = FS.run()
+FS.print_dependencies()
+FS.show_dependencies()
+
+
+#___________________________________________________________________________________________
+
+dataframe = pp.DataFrame(data, var_names = var_names_pretty)
+# tigraplot.plot_timeseries(dataframe); plt.show()
+
+
+# init and run pcmci
 pcmci = PCMCI(dataframe = dataframe,
               cond_ind_test = GPDC(significance = 'analytic', gp_params = None),
               verbosity = 2)
+              
               
 results = pcmci.run_pcmci(tau_max = 1,
                           tau_min = 1,
@@ -67,18 +89,3 @@ tigraplot.plot_graph(
     node_ticks=.1,
     cmap_nodes='OrRd',
     ); plt.show()
-
-
-
-df = pd.DataFrame(data)
-FS = FSelector(df, 
-               alpha = alpha, 
-               min_lag = min_lag, 
-               max_lag = max_lag, 
-               sel_method = TE(), 
-               verbosity = CPLevel.DEBUG,
-               resfolder = 'w_selector')
-
-selector_res = FS.run()
-FS.print_dependencies()
-FS.show_dependencies()
