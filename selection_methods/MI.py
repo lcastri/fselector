@@ -1,19 +1,24 @@
+from enum import Enum
 from selection_methods.SelectionMethod import SelectionMethod, CTest, _suppress_stdout
 from idtxl.multivariate_mi import MultivariateMI
 from idtxl.data import Data
 
+class MIestimator(Enum):
+    Gaussian = 'JidtGaussianCMI'
+    Kraskov = 'JidtKraskovCMI'
+
 
 class MI(SelectionMethod):
-    def __init__(self):
+    def __init__(self, estimator: MIestimator):
         super().__init__(CTest.MI)
-
+        self.estimator = estimator
 
     def compute_dependencies(self):
         with _suppress_stdout():
             data = Data(self.d.values, dim_order='sp') # sp = samples(row) x processes(col)
 
             network_analysis = MultivariateMI()
-            settings = {'cmi_estimator': 'JidtGaussianCMI',
+            settings = {'cmi_estimator': self.estimator.value, #'JidtGaussianCMI',
                         'max_lag_sources': self.max_lag,
                         'min_lag_sources': self.min_lag,
                         'alpha_max_stats': self.alpha,

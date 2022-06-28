@@ -3,7 +3,7 @@ from CPrinter import CPLevel
 from FSelector import FSelector
 from selection_methods.CCorr import CCorr
 from selection_methods.MI import MI 
-from selection_methods.TE import TE
+from selection_methods.TE import TE, TEestimator
 from selection_methods.myTE import myTE
 
 
@@ -22,7 +22,7 @@ if __name__ == '__main__':
                    alpha = alpha, 
                    min_lag = min_lag, 
                    max_lag = max_lag, 
-                   sel_method = TE(), 
+                   sel_method = TE(TEestimator.Kraskov), 
                    verbosity = CPLevel.DEBUG,
                    resfolder = 'pippo')
     
