@@ -2,7 +2,7 @@ import pandas as pd
 from CPrinter import CPLevel
 from FSelector import FSelector
 from selection_methods.CCorr import CCorr
-from selection_methods.MI import MI 
+from selection_methods.MI import MI, MIestimator
 from selection_methods.TE import TE, TEestimator
 from selection_methods.myTE import myTE
 

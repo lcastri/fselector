@@ -20,9 +20,11 @@ class TE(SelectionMethod):
             data = Data(self.d.values, dim_order='sp') # sp = samples(row) x processes(col)
 
             network_analysis = MultivariateTE()
-            settings = {'cmi_estimator': self.estimator.value,#'JidtGaussianCMI',#'JidtKraskovCMI',
+            settings = {'cmi_estimator': self.estimator.value,
                         'max_lag_sources': self.max_lag,
                         'min_lag_sources': self.min_lag,
+                        'max_lag_target': self.max_lag,
+                        'min_lag_target': self.min_lag,
                         'alpha_max_stats': self.alpha,
                         'alpha_min_stats': self.alpha,
                         'alpha_omnibus': self.alpha,

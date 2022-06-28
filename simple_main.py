@@ -7,7 +7,7 @@ from tigramite.pcmci import PCMCI
 from tigramite.independence_tests import ParCorr, CMIknn, GPDC, GPDCtorch
 from CPrinter import CPLevel
 from FSelector import FSelector
-from selection_methods.TE import TE
+from selection_methods.TE import TE, TEestimator
 from datetime import datetime
 
 
@@ -49,7 +49,7 @@ FS = FSelector(df,
                alpha = alpha, 
                min_lag = min_lag, 
                max_lag = max_lag, 
-               sel_method = TE(), 
+               sel_method = TE(TEestimator.Kraskov), 
                verbosity = CPLevel.DEBUG,
                resfolder = 'simpleCMI')
 
