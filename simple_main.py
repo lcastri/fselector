@@ -33,8 +33,8 @@ data[:, -1] = const
 
 
 for t in range(1, nsample):
-    data[t, 0] += 4 * data[t-1, 1]
-    data[t, 2] += 0.3 * data[t-1, 1]
+    data[t, 0] += data[t-1, 1] * (4 * data[t-1, 4])
+    data[t, 2] += 0.3 * data[t-1, 1]**2
     data[t, 4] += 0.2 * (data[t-1, 4] + data[t-1, 5])
 
 
@@ -77,7 +77,7 @@ tigraplot.plot_graph(
     val_matrix=results['val_matrix'],
     graph=results['graph'],
     save_name='wo_selector',
-    var_names=var_names,
+    var_names=var_names_pretty,
     link_colorbar_label='cross-MCI',
     node_colorbar_label='auto-MCI',
     vmin_edges=0.,

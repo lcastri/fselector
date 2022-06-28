@@ -192,7 +192,7 @@ class FSelector():
         dependencies_matrix = self.__get_dependencies_matrix()
 
         fig, ax = plt.subplots()
-        im = ax.imshow(dependencies_matrix, cmap=plt.cm.Wistia, interpolation='nearest', vmin=0, vmax=1, origin='lower')
+        im = ax.imshow(dependencies_matrix, cmap=plt.cm.Greens, interpolation='nearest', vmin=0, vmax=1, origin='lower')
         fig.colorbar(im, orientation='vertical', label="score")
 
         plt.xlabel("Sources")
