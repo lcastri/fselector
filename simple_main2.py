@@ -16,29 +16,17 @@ alpha = 0.05
 min_lag = 1
 max_lag = 1
 
-resfolder = 'p7_MI_CMI'
+resfolder = 'provaMI'
 np.random.seed(1)
 nsample = 1500
-nfeature = 7
+nfeature = 4
 data = np.random.randn(nsample, nfeature)
 
 
-const = list()
-for t in range(int(nsample/3)):
-    const.append(5)
-for t in range(int(nsample/3)):
-    const.append(7)
-for t in range(int(nsample/3)):
-    const.append(2)
-const = np.array(const)
-data[:, -1] = const
-
-
 for t in range(1, nsample):
-    data[t, 0] += data[t-1, 1] * (4 * data[t-1, 4])
-    data[t, 2] += 0.3 * data[t-1, 1]**2
-    data[t, 3] += data[t-1, 3] + 0.01
-    data[t, 4] += 0.2 * (data[t-1, 4] + 2 * data[t-1, 5])
+    data[t, 0] += 0.5 * data[t-1, 1]**2
+    data[t, 1] += 0.7 * data[t-1, 1]
+    data[t, 2] += 1.7 * data[t-1, 1] + data[t-1, 3]
 
 
 var_names = ['X_' + str(f) for f in range(nfeature)]
@@ -50,7 +38,7 @@ FS = FSelector(df,
                alpha = alpha, 
                min_lag = min_lag, 
                max_lag = max_lag, 
-               sel_method = MI(MIestimator.Kraskov), 
+               sel_method = MI(MIestimator.Gaussian), 
                verbosity = CPLevel.DEBUG,
                resfolder = resfolder)
 
@@ -58,7 +46,7 @@ startTE = datetime.now()
 selector_res = FS.run()
 stopTE = datetime.now()
 
-print("\nTOTAL TIME WITH SELECTOR: (hh:mm:ss.ms) {}".format(str(stopTE - startTE)))
+print("\nTOTAL TIME WITH TE: (hh:mm:ss.ms) {}".format(str(stopTE - startTE)))
 
 FS.print_dependencies()
 FS.show_dependencies()
@@ -72,8 +60,8 @@ dataframe = pp.DataFrame(data, var_names = var_names_pretty)
 
 # init and run pcmci
 pcmci = PCMCI(dataframe = dataframe,
-            #   cond_ind_test = GPDC(significance = 'analytic', gp_params = None),
-              cond_ind_test = CMIknn(),
+              cond_ind_test = GPDC(significance = 'analytic', gp_params = None),
+            #   cond_ind_test = CMIknn(),
               verbosity = 2)
               
 startPCMCI = datetime.now()              
@@ -81,7 +69,7 @@ results = pcmci.run_pcmci(tau_max = 1,
                           tau_min = 1,
                           pc_alpha = 0.05)
 stopPCMCI = datetime.now()              
-print("\nTOTAL TIME WITHOUT SELECTOR: (hh:mm:ss.ms) {}".format(str(stopPCMCI - startPCMCI)))
+print("\nTOTAL TIME WITHOUT TE: (hh:mm:ss.ms) {}".format(str(stopPCMCI - startPCMCI)))
 
 
 tigraplot.plot_graph(
