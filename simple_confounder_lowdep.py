@@ -26,7 +26,7 @@ data = np.random.randn(nsample, nfeature)
 
 for t in range(1, nsample):
     data[t, 1] += 10 * data[t-1, 0]
-    data[t, 2] += 0.00003 * data[t-1, 0] + 0.2
+    data[t, 2] += 0.0003 * data[t-1, 0] + 0.2
     data[t, 3] += -1.7 * data[t-1, 0]
     data[t, 4] += data[t-1, 1] + 3*data[t-1, 2]
     data[t, 5] += data[t-1, 2] + data[t-1, 3]

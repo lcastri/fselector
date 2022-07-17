@@ -1,22 +1,23 @@
 import copy
 import pickle
 from tigramite.pcmci import PCMCI
-from tigramite.independence_tests import ParCorr, CMIknn, GPDC, GPDCtorch
+from tigramite.independence_tests import CondIndTest, ParCorr, CMIknn, GPDC, GPDCtorch
 import tigramite.data_processing as pp
 import tigramite.plotting as tigraplot
 import numpy as np
 from CPrinter import CPLevel, CP
 from utilities import utilities as utils, dag
-
+import result_handler as rh
 
 class FValidator():
-    def __init__(self, d, alpha, min_lag, max_lag, resfolder, verbosity: CPLevel):
+    def __init__(self, d, alpha, min_lag, max_lag, val_condtest: CondIndTest, resfolder, verbosity: CPLevel):
         self.d = d
         self.alpha = alpha
         self.min_lag = min_lag
         self.max_lag = max_lag
         self.result = None
         self.val_method = None
+        self.val_condtest = val_condtest
         self.verbosity = verbosity.value
 
         self.respath = None
@@ -83,13 +84,13 @@ class FValidator():
         
         # init and run pcmci
         self.val_method = PCMCI(dataframe = dataframe,
-                                cond_ind_test = GPDC(significance = 'analytic', gp_params = None),
+                                cond_ind_test = self.val_condtest,#GPDC(significance = 'analytic', gp_params = None),
                                 verbosity = self.verbosity)
 
         self.result = self.val_method.run_pcmci(selected_links = selected_links,
                                                 tau_max = self.max_lag,
                                                 tau_min = self.min_lag,
-                                                pc_alpha = self.alpha)
+                                                pc_alpha = 0.05)
         
         
         return self.__return_parents_dict()
@@ -169,3 +170,16 @@ class FValidator():
             parents_dict[j] = sorted(links, key=links.get, reverse=True)
         
         return parents_dict
+    
+    
+    def create_plot(self):
+        res = copy.deepcopy(self.result)
+        res['var_names'] = self.pretty_features
+        # rh.dag(res, 
+        #        alpha = self.alpha, 
+        #        save_name = self.dag_path, 
+        #        font_size = 13)
+        rh.ts_dag(res, 
+                  alpha = self.alpha,
+                  save_name = self.ts_dag_path,
+                  font_size=13)

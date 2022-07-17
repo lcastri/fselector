@@ -7,6 +7,7 @@ import numpy as np
 from selection_methods.constants import *
 from utilities import utilities as utils, logger as log
 from FValidator import FValidator
+from tigramite.independence_tests import CondIndTest
 import sys
 
 import warnings
@@ -15,7 +16,7 @@ warnings.filterwarnings('ignore')
 
 class FSelector():
 
-    def __init__(self, d, alpha, min_lag, max_lag, sel_method: SelectionMethod, verbosity: CPLevel, resfolder = None):
+    def __init__(self, d, alpha, min_lag, max_lag, sel_method: SelectionMethod, val_condtest: CondIndTest, verbosity: CPLevel, resfolder = None):
         self.o_d = d
         self.o_dependencies = None
         
@@ -34,7 +35,7 @@ class FSelector():
             logpath, self.dependency_path = utils.get_selectorpath(resfolder)
             sys.stdout = log.Logger(logpath)
         
-        self.validator = FValidator(d, alpha, min_lag, max_lag, resfolder, verbosity)       
+        self.validator = FValidator(d, alpha, min_lag, max_lag, val_condtest, resfolder, verbosity)       
         CP.set_verbosity(verbosity)
 
 
@@ -134,17 +135,15 @@ class FSelector():
             list(str): list of selected variable names
         """
         
-        startSel = datetime.now()
-        self.run_selector()
-        stopSel = datetime.now()
-        print("\nTOTAL TIME Selector: (hh:mm:ss.ms) {}".format(str(stopSel - startSel)))
-        
+        self.run_selector()        
         while self.score_threshold is not utils.Thres.NOFOUND:
             # exclude dependencies based on score threshold
             self.__apply_score_threshold()
             
             # list of selected features based on dependencies
             sel_features = self.get_selected_features()
+            if not sel_features: #FIXME: to check if it is empty
+                break
 
             # shrink dataframe d and dependencies by sel_features
             self.__shrink_d(sel_features)
@@ -154,10 +153,7 @@ class FSelector():
             
             # causal model on selected links
             self.validator.d = self.d
-            startVal = datetime.now()
             pcmci_result = self.validator.run(selected_links)
-            stopVal = datetime.now()
-            print("\nTOTAL TIME Validator: (hh:mm:ss.ms) {}".format(str(stopVal - startVal)))
             
             if CP.verbosity.value >= CPLevel.DEBUG.value:
                 # comparison between obtained causal model and selected links 
@@ -166,9 +162,11 @@ class FSelector():
             # get score threshold based on causal model
             self.__get_score_threshold(pcmci_result)
         
-        self.validator.save_result()
-        self.validator.build_dag()
-        self.validator.build_ts_dag()
+        if self.get_selected_features(): #FIXME: to check if it is empty
+            self.validator.save_result()
+            # self.validator.build_dag()
+            # self.validator.build_ts_dag()
+            self.validator.create_plot()
         return self.get_selected_features()
 
 

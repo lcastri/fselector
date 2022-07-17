@@ -40,8 +40,8 @@ for t in range(1, nsample):
     data[t, 3] += data[t-1, 3] + 0.53
     data[t, 4] += 0.2 * (data[t-1, 4] + 2 * data[t-1, 5])
     data[t, 7] += 0.0002 * data[t-1, 6]
-    data[t, 8] += 2 * data[t-1, 6]
-    data[t, 9] += 0.75 * data[t-1, 6]
+    data[t, 8] += 0.002 * data[t-1, 6]
+    data[t, 9] += 0.02 * data[t-1, 6]
     data[t, 10] += data[t-1, 7] + data[t-1, 8]
 
 

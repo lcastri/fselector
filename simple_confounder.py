@@ -17,7 +17,7 @@ alpha = 0.05
 min_lag = 1
 max_lag = 1
 
-resfolder = 'provaConfounder_lowdep'
+resfolder = 'provaConfounder'
 np.random.seed(1)
 nsample = 1500
 nfeature = 6
@@ -26,7 +26,7 @@ data = np.random.randn(nsample, nfeature)
 
 for t in range(1, nsample):
     data[t, 1] += 10 * data[t-1, 0]
-    data[t, 2] += 0.00003 * data[t-1, 0] + 0.2
+    data[t, 2] += 0.3 * data[t-1, 0] + 0.2
     data[t, 3] += -1.7 * data[t-1, 0]
     data[t, 4] += data[t-1, 1] + 3*data[t-1, 2]
     data[t, 5] += data[t-1, 2] + data[t-1, 3]
