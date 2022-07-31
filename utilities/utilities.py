@@ -22,19 +22,6 @@ def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def bold(msg):
-    """
-    Adds bold font option to the msg 
-
-    Args:
-        msg (str): message to make bold
-
-    Returns:
-        str: bold message
-    """
-    return '\033[1m' + msg + '\033[0m'
-
-
 def get_selectorpath(resfolder):
     """
     Return log file path

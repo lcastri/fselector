@@ -116,11 +116,11 @@ class FSelector():
         """
         CP.info("\n")
         CP.info(utils.DASH)
-        CP.info(utils.bold("Selecting relevant features among: " + str(self.features)))
-        CP.info(utils.bold("Selection method: " + self.sel_method.name))
-        CP.info(utils.bold("Significance level: " + str(self.alpha)))
-        CP.info(utils.bold("Max lag time: " + str(self.max_lag)))
-        CP.info(utils.bold("Min lag time: " + str(self.min_lag)))
+        CP.info("Selecting relevant features among: " + str(self.features))
+        CP.info("Selection method: " + self.sel_method.name)
+        CP.info("Significance level: " + str(self.alpha))
+        CP.info("Max lag time: " + str(self.max_lag))
+        CP.info("Min lag time: " + str(self.min_lag))
 
         self.sel_method.initialise(self.d, self.alpha, self.min_lag, self.max_lag)
         self.dependencies = self.sel_method.compute_dependencies()
@@ -184,7 +184,7 @@ class FSelector():
                 sources_t.append(t)
             f_list = list(set(f_list + sources_t))
         self.result = [f for f in self.features if f in f_list]
-        CP.info(utils.bold("\nFeature selected: "+ str(self.result)))
+        CP.info("\nFeature selected: "+ str(self.result))
 
         return self.result
     
@@ -311,7 +311,7 @@ class FSelector():
         """
         if (self.score_threshold is not utils.Thres.NOFOUND) and (self.score_threshold != utils.Thres.INIT):
             CP.debug(utils.DASH)
-            CP.debug(utils.bold("Applying score threshold"))
+            CP.debug("Applying score threshold")
             depend = copy.deepcopy(self.dependencies)
             for t in depend:
                 sources = depend[t]
@@ -334,7 +334,7 @@ class FSelector():
             float: score threshold
         """
         CP.debug(utils.DASH)
-        CP.debug(utils.bold("Difference(s)"))
+        CP.debug("Difference(s)")
         CP.debug(utils.DASH)
         score_removed = list()
         for t in self.dependencies:
@@ -346,7 +346,7 @@ class FSelector():
             CP.info("\n==> Difference(s) between dependencies and causal model")
             CP.info("==> Stopping criteria NOT REACHED")
             self.score_threshold = max(score_removed)
-            CP.debug(utils.bold("Score threshold = " + str(self.score_threshold)))
+            CP.debug("Score threshold = " + str(self.score_threshold))
         else:
             CP.debug("None")
             CP.info("\n==> NO difference(s) between dependencies and causal model")
@@ -359,13 +359,13 @@ class FSelector():
         selector_sel_links = self.__get_selected_links()
         print()
         print(utils.DASH)
-        print(utils.bold("Selector selected links:"))
+        print("Selector selected links:")
         print(utils.DASH)
         for t in selector_sel_links.keys():
             print("Sources for target", self.features[t], ":", [self.features[s[0]] for s in selector_sel_links[t]])
             
         print(utils.DASH)
-        print(utils.bold("Validator selected links:"))
+        print("Validator selected links:")
         print(utils.DASH)
         for t in validator_sel_links.keys():
             print("Sources for target", self.features[t], ":", [self.features[s[0]] for s in validator_sel_links[t]])

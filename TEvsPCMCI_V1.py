@@ -16,12 +16,13 @@ import os
 
 
 ground_truth = {
-                'X_0' : [],
-                'X_1' : [('X_0', -1)],
-                'X_2' : [('X_0', -1)],
-                'X_3' : [('X_0', -1), ('X_1', -1)],
-                'X_4' : [('X_3', -1), ('X_5', -1)],
-                'X_5' : [('X_1', -1), ('X_2', -1)],
+                'X_0' : [('X_1', -1), ('X_2', -1)],
+                'X_1' : [],
+                'X_2' : [('X_1', -1)],
+                'X_3' : [('X_3', -1)],
+                'X_4' : [('X_4', -1), ('X_5', -1)],
+                'X_5' : [],
+                'X_6' : [],
                 }
 
 
@@ -32,18 +33,19 @@ max_lag = 1
 resfolder = 'TEvsPCMCI2'
 np.random.seed(1)
 nsample = 1500
-nfeature = 6
-d = np.random.randn(nsample, nfeature)
+nfeature = 7
+d = np.random.random(size = (nsample, nfeature))
 
-min_n = 5
-max_n = 10
+min_n = 1
+max_n = 5
 c = dict()
-c[0] = np.array([np.random.uniform(min_n, max_n)])
+c[0] = np.array([np.random.uniform(min_n, max_n), np.random.uniform(min_n, max_n)])
 c[1] = np.array([np.random.uniform(min_n, max_n)])
 c[2] = np.array([np.random.uniform(min_n, max_n)])
-c[3] = np.array([np.random.uniform(min_n, max_n)])
+c[3] = np.array([np.random.uniform(min_n, max_n), np.random.uniform(min_n, max_n)])
 c[4] = np.array([np.random.uniform(min_n, max_n), np.random.uniform(min_n, max_n)])
 c[5] = np.array([np.random.uniform(min_n, max_n)])
+c[6] = np.array([np.random.uniform(min_n, max_n)])
 
 var_names = ['X_' + str(f) for f in range(nfeature)]
 var_names_pretty = [r'$X_' + str(f) + '$' for f in range(nfeature)]
@@ -52,17 +54,28 @@ iteration = range(20)
 RES = {i : {sta._TEPCMCI : {sta._TIME : None, sta._PREC : None, sta._RECA : None}, 
             sta._PCMCI : {sta._TIME : None, sta._PREC : None, sta._RECA : None}} for i in iteration}
 
+
+const = list()
+for t in range(int(nsample/3)):
+    const.append(20)
+for t in range(int(nsample/3)):
+    const.append(70)
+for t in range(int(nsample/3)):
+    const.append(30)
+const = np.array(const)
+
+
 for i in iteration:
     coeff = deepcopy(c)
     data = deepcopy(d)
+    data[:, -1] = const
     if i != 0:
         coeff = {n: coeff[n]/np.array(2*i) for n in range(nfeature)}    
     for t in range(max_lag, nsample):
-        data[t, 1] += coeff[1][0] * data[t-1, 0]
-        data[t, 2] += coeff[2][0] * data[t-1, 0]**2
-        data[t, 3] += coeff[3][0] * data[t-1, 0] * data[t-1, 1]
-        data[t, 4] += coeff[4][0] + data[t-1, 3] + coeff[4][1] * data[t-1, 5]
-        data[t, 5] += coeff[5][0] + data[t-1, 1] * data[t-1, 2]
+        data[t, 0] += coeff[0][0] * data[t-1, 1] * data[t-1, 2]
+        data[t, 2] += coeff[2][0] * data[t-1, 1] ** 2
+        data[t, 3] += data[t-1, 3] + coeff[3][0] + np.random.randn()
+        data[t, 4] += coeff[4][0] / data[t-1, 4] + coeff[4][1] * data[t-1, 5]
 
     resdir = deepcopy(resfolder)
     resdir = resdir + '/' + str(i)
@@ -75,7 +88,7 @@ for i in iteration:
                    alpha = alpha, 
                    min_lag = min_lag, 
                    max_lag = max_lag, 
-                   sel_method = TE(TEestimator.Gaussian), 
+                   sel_method = TE(TEestimator.Kraskov), 
                    val_condtest = GPDC(significance = 'analytic', gp_params = None),
                    verbosity = CPLevel.DEBUG,
                    resfolder = resdir)
@@ -134,10 +147,14 @@ for i in iteration:
     if not empty_cm:
         res = deepcopy(results)
         res['var_names'] = var_names_pretty
-        rh.dag(res, 
-            alpha = alpha, 
-            save_name = 'results/' + resdir + '/pcmci_dag.png', 
-            font_size = 18)
+        rh.dag2(res, 
+                alpha = alpha, 
+                save_name = 'results/' + resdir + '/pcmci_dag.png', 
+                font_size = 13)
+        rh.tsdag3(res, 
+                  alpha = alpha, 
+                  save_name = 'results/' + resdir + '/pcmci_tsdag.png', 
+                  font_size = 13)
     
 res_file = open(os.getcwd() + "/results/"+resfolder + "/res.json", "w+")
 json.dump(RES, res_file)

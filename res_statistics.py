@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 from matplotlib import pyplot as plt
+import numpy as np
 
 _TIME = 'time'
 _PREC = 'precision'
@@ -9,6 +10,11 @@ _RECA = 'recall'
 _TEPCMCI = 'tepcmci'
 _PCMCI = 'pcmci'
 _F1SCORE = 'f1_score'
+
+dlabel = {_TIME : 'time [s]',
+          _PREC : 'precision',
+          _RECA : 'recall',
+           _F1SCORE : 'f1_score'}
 
 def get_TP(gt, cm):
     """
@@ -66,7 +72,6 @@ def get_FN(gt, cm):
     counter = 0
     for node in gt.keys():
         for edge in gt[node]:
-            # if (node not in cm) or (edge not in cm[node]): counter += 1
             if edge not in cm[node]: counter += 1
     return counter
 
@@ -109,6 +114,8 @@ def plot_data(resfolder, file_path, data):
         fig, ax = plt.subplots(figsize=(6,4))
         plt.plot(range(len(r.keys())), data_tepcmci)
         plt.plot(range(len(r.keys())), data_pcmci)
+        plt.xlabel("Iteration")
+        plt.ylabel(dlabel[data])
         plt.legend(['TEPCMCI', 'PCMCI'])
         plt.title(data + ' comparison')
         plt.savefig(os.getcwd() + "/results/" + resfolder + "/" + data + '.eps')
@@ -120,3 +127,61 @@ def plot_statistics(resfolder):
     plot_data(resfolder, res_path, _F1SCORE)
     plot_data(resfolder, res_path, _PREC)
     plot_data(resfolder, res_path, _RECA)
+    
+    
+    
+    
+    
+def plot_data2(resfolder, file_path, data, nvar):
+    since = datetime.datetime(1900, 1, 1, 0, 0, 0, 0)
+    with open(file_path) as json_file:
+        r = json.load(json_file)
+        data_tepcmci = list()
+        data_pcmci = list()
+        for i in r.keys():
+            tmp_data_tepcmci = list()
+            tmp_data_pcmci = list()
+            for j in r[i].keys():
+                if data == _TIME:
+                    time_tepcmci = datetime.datetime.strptime(r[i][j][_TEPCMCI][data], '%H:%M:%S.%f')
+                    time_pcmci = datetime.datetime.strptime(r[i][j][_PCMCI][data], '%H:%M:%S.%f')
+                    tmp_data_tepcmci.append((time_tepcmci - since).total_seconds())
+                    tmp_data_pcmci.append((time_pcmci - since).total_seconds())
+                else:
+                    tmp_data_tepcmci.append(r[i][j][_TEPCMCI][data])
+                    tmp_data_pcmci.append(r[i][j][_PCMCI][data])
+            if len(data_tepcmci) != 0:
+                data_tepcmci = np.vstack([np.array(data_tepcmci), np.array(tmp_data_tepcmci)])
+                data_pcmci = np.vstack([np.array(data_pcmci), np.array(tmp_data_pcmci)])
+            else:
+                data_tepcmci = np.array(tmp_data_tepcmci)
+                data_pcmci = np.array(tmp_data_pcmci)
+        
+        data_tepcmci = np.sum(data_tepcmci, 0)
+        data_tepcmci = np.divide(data_tepcmci, len(r))    
+        data_pcmci = np.sum(data_pcmci, 0)
+        data_pcmci = np.divide(data_pcmci, len(r))
+            
+        fig, ax = plt.subplots(figsize=(6,4))
+        plt.plot(range(len(data_tepcmci)), data_tepcmci)
+        plt.plot(range(len(data_pcmci)), data_pcmci)
+        plt.xticks(range(len(data_tepcmci)))
+        plt.xlabel("Iteration")
+        plt.ylabel(dlabel[data])
+        plt.legend(['TEPCMCI', 'PCMCI'])
+        plt.title(data + ' comparison')
+        plt.savefig(os.getcwd() + "/results/" + resfolder + "/" + str(nvar) + "_" + data + '.eps')
+    
+    
+def plot_statistics2(resfolder, nvar):
+    res_path = os.getcwd() + "/results/" + resfolder + "/" + str(nvar) + ".json"
+    plot_data2(resfolder, res_path, _TIME, nvar)
+    plot_data2(resfolder, res_path, _F1SCORE, nvar)
+    plot_data2(resfolder, res_path, _PREC, nvar)
+    plot_data2(resfolder, res_path, _RECA, nvar)
+    
+    
+if __name__ == '__main__':   
+    resfolder = 'TEvsPCMCI345'
+    for nvar in range(3,6):
+        plot_statistics2(resfolder, nvar)

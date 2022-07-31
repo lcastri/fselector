@@ -73,7 +73,7 @@ class FValidator():
         """
         CP.info('\n')
         CP.info(utils.DASH)
-        CP.info(utils.bold("Running Causal Discovery Algorithm to find score threshold"))
+        CP.info("Running Causal Discovery Algorithm to find score threshold")
 
         # build tigramite dataset
         vector = np.vectorize(float)
@@ -175,11 +175,11 @@ class FValidator():
     def create_plot(self):
         res = copy.deepcopy(self.result)
         res['var_names'] = self.pretty_features
-        # rh.dag(res, 
-        #        alpha = self.alpha, 
-        #        save_name = self.dag_path, 
-        #        font_size = 13)
-        rh.ts_dag(res, 
-                  alpha = self.alpha,
-                  save_name = self.ts_dag_path,
-                  font_size=13)
+        rh.dag2(res, 
+               alpha = self.alpha, 
+               save_name = self.dag_path, 
+               font_size = 12)
+        # rh.tsdag3(res, 
+        #           alpha = self.alpha,
+        #           save_name = self.ts_dag_path,
+        #           font_size = 13)
